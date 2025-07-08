@@ -1,8 +1,9 @@
-import { createWalletClient, custom, createPublicClient } from "https://esm.sh/viem"
+import { createWalletClient, custom, createPublicClient, parseEther, defineChain } from "https://esm.sh/viem"
+import { contractAddress, abi } from "./constants-js.js"
 
 const connectButton = document.getElementById("connectButton");
 const fundButton = document.getElementById("fundButton");
-const ethAmountInput = document.getElementById("ethAmountInput");
+const ethAmountInput = document.getElementById("ethAmount");
 
 let walletClient
 let publicClient
@@ -20,27 +21,53 @@ async function connect() {
 }
 
 async function fund() {
-    const ethAmount = ethAmountInput.value
-    console.log("Funding with ${ethAmount} ...")
+    const ethAmount = ethAmountInput.value;
+    console.log(`Funding with ${ethAmount}...`)
 
     if (typeof window.ethereum !== "undefined") {
         walletClient = createWalletClient({
             transport: custom(window.ethereum)
         });
-        await walletClient.requestAddresses();
+
+        const [connectedAccount] = await walletClient.requestAddresses();
+        const currentChain = await getCurrentChain(walletClient);
+
         publicClient = createPublicClient({
             transport: custom(window.ethereum)
         });
+
         await publicClient.simulateContract({
-            address: '',
-            // abi: ,
+            address: contractAddress,
+            abi: abi,
             functionName: 'fund',
-            account,
+            account: connectedAccount,
+            chain: currentChain,
+            value: parseEther(ethAmount),
+
         })
     } else {
-        connectButton.innerHTML = "Please install MetaMask"
+        connectButton.innerHTML = "Please install MetaMask";
     }
 }
 
-fundButton.onclick = fund();
-connectButton.onclick = connect();
+async function getCurrentChain(client) {
+    const chainId = await client.getChainId()
+    const currentChain = defineChain({
+        id: chainId,
+        name: "Custom Chain",
+        nativeCurrency: {
+            name: "Ether",
+            symbol: "ETH",
+            decimals: 18,
+        },
+        rpcUrls: {
+            default: {
+                http: ["http://localhost:8545"],
+            },
+        },
+    })
+    return currentChain
+}
+
+fundButton.onclick = fund;
+connectButton.onclick = connect;
