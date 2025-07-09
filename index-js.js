@@ -13,8 +13,18 @@ async function connect() {
         walletClient = createWalletClient({
             transport: custom(window.ethereum)
         });
-        await walletClient.requestAddresses();
-        connectButton.innerHTML = "Wallet Connected"
+        try {
+            const accounts = await walletClient.requestAddresses();
+
+            if (accounts.length > 0) {
+                connectButton.innerHTML = "Wallet Connected";
+            } else {
+                connectButton.innerHTML = "Connection Failed";
+            }
+        } catch (error) {
+            console.error("Failed to connect wallet:", error);
+            connectButton.innerHTML = "Connection Error";
+        }
     } else {
         connectButton.innerHTML = "Please install MetaMask"
     }
