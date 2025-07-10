@@ -6,6 +6,7 @@ const fundButton = document.getElementById("fundButton");
 const ethAmountInput = document.getElementById("ethAmount");
 const balanceButton = document.getElementById("balanceButton");
 const withdrawButton = document.getElementById("withdrawButton");
+const AddresstoAmountFundedButton = document.getElementById("AddresstoAmountFundedButton")
 
 let walletClient
 let publicClient
@@ -37,30 +38,33 @@ async function fund() {
     console.log(`Funding with ${ethAmount}...`)
 
     if (typeof window.ethereum !== "undefined") {
-        walletClient = createWalletClient({
-            transport: custom(window.ethereum)
-        });
+        try {
+            walletClient = createWalletClient({
+                transport: custom(window.ethereum)
+            });
 
-        const [connectedAccount] = await walletClient.requestAddresses();
-        const currentChain = await getCurrentChain(walletClient);
+            const [connectedAccount] = await walletClient.requestAddresses();
+            const currentChain = await getCurrentChain(walletClient);
 
-        publicClient = createPublicClient({
-            transport: custom(window.ethereum)
-        });
+            publicClient = createPublicClient({
+                transport: custom(window.ethereum)
+            });
 
-        const { request } = await publicClient.simulateContract({
-            address: contractAddress,
-            abi: abi,
-            functionName: 'fund',
-            account: connectedAccount,
-            chain: currentChain,
-            value: parseEther(ethAmount),
+            const { request } = await publicClient.simulateContract({
+                address: contractAddress,
+                abi: abi,
+                functionName: 'fund',
+                account: connectedAccount,
+                chain: currentChain,
+                value: parseEther(ethAmount),
 
-        });
+            });
 
-        const hash = await walletClient.writeContract(request);
-        console.log(hash);
-
+            const hash = await walletClient.writeContract(request);
+            console.log(hash);
+        } catch (error) {
+            console.log(error)
+        }
     } else {
         connectButton.innerHTML = "Please install MetaMask";
     }
@@ -131,7 +135,35 @@ async function withdraw() {
     }
 }
 
+async function getAddressToAmountFunded() {
+    if (typeof window.ethereum !== "undefined") {
+        console.log("Fetching address to amount funded...")
+        try {
+            walletClient = createWalletClient({
+                transport: custom(window.ethereum)
+            });
+            const [address] = await walletClient.requestAddresses();
+
+            publicClient = createPublicClient({
+                transport: custom(window.ethereum),
+            })
+            const amount = await publicClient.readContract({
+                address: contractAddress,
+                abi,
+                functionName: "getAddressToAmountFunded",
+                args: [address],
+            });
+            console.log(`Address ${address} funded ${formatEther(amount)} ETH`)
+        } catch (error) {
+            console.log(error)
+        }
+    } else {
+        getAddressToAmountFunded.innerHTML = "Please install MetaMask"
+    }
+}
+
 fundButton.onclick = fund;
 connectButton.onclick = connect;
 balanceButton.onclick = getBalance;
 withdrawButton.onclick = withdraw;
+AddresstoAmountFundedButton.onclick = getAddressToAmountFunded;
